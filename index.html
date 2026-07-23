@@ -1,0 +1,1156 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>情侣红绿灯挑战</title>
+<style>
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg-setup: #fce4ec;
+  --card-bg: rgba(255,255,255,0.35);
+  --pink: #e91e63;
+  --pink-light: #f06292;
+  --pink-dark: #c2185b;
+  --text-dark: #2d1b1b;
+  --text-mid: #6b4e4e;
+  --text-light: #a08888;
+  --red-glow: #ff1744;
+  --yellow-glow: #ffd600;
+  --green-glow: #00e676;
+  --shell-bg: #ffffff;
+  --shell-border: #e0e0e0;
+}
+
+html, body {
+  height: 100%; width: 100%;
+  overflow: hidden;
+  font-family: -apple-system, "PingFang SC", "Noto Sans SC", "Helvetica Neue", sans-serif;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+  background: #fce4ec;
+}
+
+.screen {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column; align-items: center;
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.screen.hidden {
+  opacity: 0; pointer-events: none;
+  transform: scale(0.96);
+}
+
+#setup-screen {
+  justify-content: center;
+  background: linear-gradient(160deg, #fce4ec 0%, #f8bbd0 40%, #f48fb1 100%);
+  padding: 24px;
+  z-index: 10;
+}
+.float-blob {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(12px);
+  opacity: 0.20;
+  z-index: 0;
+}
+
+.setup-card {
+  position: relative; z-index: 1;
+  background: var(--card-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 28px;
+  padding: 40px 28px 32px;
+  width: 100%; max-width: 380px;
+  box-shadow: 0 8px 40px rgba(180,40,80,0.12), 0 2px 8px rgba(0,0,0,0.04);
+  text-align: center;
+}
+
+.setup-title {
+  font-size: clamp(26px, 5vw, 32px);
+  font-weight: 800;
+  color: #c2185b;
+  letter-spacing: 1px;
+  margin-bottom: 6px;
+}
+.setup-subtitle {
+  font-size: 14px;
+  color: #b3889b;
+  margin-bottom: 24px;
+  font-weight: 400;
+}
+
+.time-setter {
+  display: flex; align-items: center; justify-content: center; gap: 20px;
+  margin-bottom: 24px;
+}
+.time-btn {
+  width: 48px; height: 48px;
+  border-radius: 50%;
+  border: none;
+  background: var(--pink);
+  color: #fff;
+  font-size: 28px; font-weight: 900;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  line-height: 1;
+  transition: transform 0.15s ease, background 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 4px 14px rgba(233,30,99,0.3);
+  -webkit-tap-highlight-color: transparent;
+}
+.time-btn:active {
+  transform: scale(0.9);
+  background: #c2185b;
+  box-shadow: 0 2px 8px rgba(233,30,99,0.4);
+}
+.time-btn:disabled {
+  opacity: 0.35; cursor: not-allowed;
+  box-shadow: none;
+}
+
+.time-value {
+  font-size: 52px; font-weight: 800; color: #c2185b;
+  min-width: 80px; text-align: center;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 12px;
+  transition: background 0.2s ease;
+}
+.time-value:active {
+  background: rgba(233,30,99,0.08);
+}
+.time-label {
+  font-size: 13px; color: #b3889b; margin-bottom: 12px;
+}
+
+.preview-box {
+  background: #fff0f5;
+  border-radius: 16px;
+  padding: 16px 24px;
+  margin-bottom: 28px;
+  display: block;
+  width: 100%;
+}
+.preview-label {
+  font-size: 12px; color: #c48b9b; margin-bottom: 4px;
+}
+.preview-time {
+  font-size: 28px; font-weight: 700; color: #c2185b;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 2px;
+}
+
+.btn-start {
+  width: 100%;
+  padding: 16px;
+  border: none; border-radius: 16px;
+  background: linear-gradient(135deg, #e91e63 0%, #c2185b 100%);
+  color: #fff;
+  font-size: 18px; font-weight: 700;
+  letter-spacing: 2px;
+  cursor: pointer;
+  box-shadow: 0 6px 24px rgba(233,30,99,0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.3s ease;
+}
+.btn-start:active {
+  transform: scale(0.96);
+  box-shadow: 0 3px 12px rgba(233,30,99,0.4);
+}
+
+.keyboard-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.3);
+  z-index: 200;
+  display: flex; align-items: flex-end;
+  transition: opacity 0.25s ease, visibility 0.25s ease;
+}
+.keyboard-overlay.hidden {
+  opacity: 0; visibility: hidden; pointer-events: none;
+}
+.keyboard-panel {
+  width: 100%;
+  background: rgba(255,255,255,0.32);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px 20px 0 0;
+  padding: 16px 12px 28px;
+  animation: kb-slide-up 0.3s cubic-bezier(0.22, 0.61, 0.36, 1);
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.1);
+}
+@keyframes kb-slide-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.kb-display {
+  text-align: center;
+  font-size: 36px; font-weight: 800; color: #c2185b;
+  padding: 8px 0 16px;
+  min-height: 56px;
+  letter-spacing: 2px;
+}
+.kb-row {
+  display: flex; gap: 8px;
+  margin-bottom: 8px;
+}
+.kb-key {
+  flex: 1;
+  height: 52px;
+  border: none; border-radius: 10px;
+  background: #f5f5f5;
+  color: #333;
+  font-size: 22px; font-weight: 600;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s ease, transform 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.kb-key:active {
+  background: #e0e0e0;
+  transform: scale(0.95);
+}
+.kb-key.action {
+  background: #e91e63;
+  color: #fff;
+  font-size: 16px; font-weight: 700;
+}
+.kb-key.action:active {
+  background: #c2185b;
+}
+.kb-key.back {
+  background: #eee;
+  color: #888;
+  font-size: 18px;
+}
+
+#game-screen {
+  justify-content: space-between;
+  background: #1a1a2e;
+  transition: background 0.6s ease;
+  z-index: 5;
+}
+#game-screen.bg-red    { background: #b71c1c; }
+#game-screen.bg-yellow { background: #c79100; }
+#game-screen.bg-green  { background: #1b5e20; }
+
+.game-header {
+  width: 100%; padding: 20px 24px 0;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 4px;
+}
+.remaining-label {
+  font-size: 13px; color: rgba(255,255,255,0.7);
+  font-weight: 500; letter-spacing: 1px;
+  text-transform: uppercase;
+}
+.remaining-time {
+  font-size: clamp(36px, 8vw, 52px);
+  font-weight: 800; color: #fff;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 3px;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+
+.traffic-light-wrapper {
+  flex: 1;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 100%;
+  position: relative;
+}
+
+.traffic-light {
+  position: relative;
+  width: clamp(180px, 44vw, 230px);
+  background: var(--shell-bg);
+  border-radius: 36px;
+  padding: 26px 0;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 18px;
+  margin-top: clamp(-100px, -16vh, -160px);
+  box-shadow:
+    0 6px 28px rgba(0,0,0,0.12),
+    0 2px 8px rgba(0,0,0,0.06),
+    inset 0 1px 0 rgba(255,255,255,0.9);
+  border: 2px solid var(--shell-border);
+  transform-origin: bottom center;
+  transform: rotate(0deg);
+}
+.traffic-light.shaking {
+  animation: light-shake 1s ease-in-out infinite;
+}
+
+.light-bulb {
+  width: clamp(76px, 18vw, 96px);
+  height: clamp(76px, 18vw, 96px);
+  border-radius: 50%;
+  position: relative;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.light-bulb::after {
+  content: '';
+  position: absolute; inset: 0; border-radius: 50%;
+  transition: opacity 0.35s ease;
+}
+
+.light-red.off {
+  background: radial-gradient(circle at 40% 35%, #4a1515 0%, #2a0808 70%, #1a0505 100%);
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.5);
+}
+.light-yellow.off {
+  background: radial-gradient(circle at 40% 35%, #4a3a10 0%, #2a2008 70%, #1a1505 100%);
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.5);
+}
+.light-green.off {
+  background: radial-gradient(circle at 40% 35%, #153a15 0%, #082008 70%, #051005 100%);
+  box-shadow: inset 0 2px 6px rgba(0,0,0,0.5);
+}
+
+.light-red.on {
+  background: radial-gradient(circle at 45% 35%, #ff5252 0%, #ff1744 40%, #d50000 100%);
+  box-shadow:
+    0 0 20px 8px rgba(255,23,68,0.7),
+    0 0 50px 20px rgba(255,23,68,0.45),
+    0 0 90px 40px rgba(255,23,68,0.25),
+    0 0 140px 70px rgba(255,23,68,0.12),
+    inset 0 -4px 8px rgba(0,0,0,0.2),
+    inset 0 2px 4px rgba(255,255,255,0.15);
+}
+.light-red.on::after {
+  background: radial-gradient(circle at 45% 35%, rgba(255,255,255,0.8) 0%, rgba(255,200,200,0.3) 15%, transparent 40%);
+}
+
+.light-yellow.on {
+  background: radial-gradient(circle at 45% 35%, #ffff00 0%, #ffd600 40%, #ffab00 100%);
+  box-shadow:
+    0 0 20px 8px rgba(255,214,0,0.7),
+    0 0 50px 20px rgba(255,214,0,0.45),
+    0 0 90px 40px rgba(255,214,0,0.25),
+    0 0 140px 70px rgba(255,214,0,0.12),
+    inset 0 -4px 8px rgba(0,0,0,0.15),
+    inset 0 2px 4px rgba(255,255,255,0.2);
+}
+.light-yellow.on::after {
+  background: radial-gradient(circle at 45% 35%, rgba(255,255,255,0.9) 0%, rgba(255,255,200,0.35) 15%, transparent 40%);
+}
+
+.light-green.on {
+  background: radial-gradient(circle at 45% 35%, #69f0ae 0%, #00e676 40%, #00c853 100%);
+  box-shadow:
+    0 0 20px 8px rgba(0,230,118,0.7),
+    0 0 50px 20px rgba(0,230,118,0.45),
+    0 0 90px 40px rgba(0,230,118,0.25),
+    0 0 140px 70px rgba(0,230,118,0.12),
+    inset 0 -4px 8px rgba(0,0,0,0.15),
+    inset 0 2px 4px rgba(255,255,255,0.15);
+}
+.light-green.on::after {
+  background: radial-gradient(circle at 45% 35%, rgba(255,255,255,0.85) 0%, rgba(200,255,220,0.3) 15%, transparent 40%);
+}
+
+.light-countdown {
+  width: 100%; padding: 0 24px 0;
+  text-align: center;
+  transition: opacity 0.3s ease;
+  margin-top: 8px;
+}
+.light-countdown.hidden {
+  visibility: hidden;
+}
+.countdown-value {
+  font-size: clamp(28px, 6vw, 38px);
+  font-weight: 800; color: #fff;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 2px;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+.countdown-unit {
+  font-size: 14px; color: rgba(255,255,255,0.7);
+  margin-left: 4px;
+  font-weight: 500;
+}
+
+.countdown-bar-track {
+  width: clamp(180px, 44vw, 260px);
+  height: 20px;
+  border: 2px solid #000;
+  border-radius: 6px;
+  margin: 10px auto 0;
+  background: transparent;
+  overflow: hidden;
+}
+.countdown-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.05s linear;
+  width: 100%;
+}
+
+.status-hint {
+  width: 100%; padding: 10px 24px 0;
+  text-align: center;
+}
+.status-text {
+  font-size: clamp(26px, 6vw, 36px);
+  font-weight: 600; color: rgba(255,255,255,0.95);
+  letter-spacing: 1px;
+  text-shadow: 0 1px 6px rgba(0,0,0,0.3);
+}
+
+.game-footer {
+  width: 100%; padding: 0 24px 24px;
+}
+.btn-quit {
+  width: auto;
+  padding: 10px 28px;
+  border: none; border-radius: 14px;
+  background: rgba(255,255,255,0.9);
+  color: #c62828;
+  font-size: 15px; font-weight: 600;
+  letter-spacing: 1px;
+  cursor: pointer;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+  display: block;
+  margin: 0 auto;
+}
+.btn-quit:active {
+  transform: scale(0.95);
+  background: rgba(255,255,255,0.7);
+  box-shadow: 0 1px 6px rgba(0,0,0,0.15);
+}
+
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100;
+  padding: 24px;
+  transition: opacity 0.35s ease, visibility 0.35s ease;
+}
+.modal-overlay.hidden {
+  opacity: 0; visibility: hidden; pointer-events: none;
+}
+
+.fatigue-modal {
+  background: rgba(255,255,255,0.45);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px;
+  padding: 24px 20px 20px;
+  width: 100%; max-width: 260px;
+  text-align: center;
+  box-shadow: 0 12px 36px rgba(0,0,0,0.15);
+  animation: modal-pop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.quit-modal {
+  background: rgba(255,255,255,0.45);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px;
+  padding: 24px 20px 20px;
+  width: 100%; max-width: 260px;
+  text-align: center;
+  box-shadow: 0 12px 36px rgba(0,0,0,0.15);
+  animation: modal-pop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.quit-modal .stop-sign {
+  width: 48px; height: 48px;
+  margin: 0 auto 14px;
+}
+.quit-modal .stop-sign-inner {
+  font-size: 20px;
+}
+.quit-modal .fatigue-title {
+  font-size: 17px; margin-bottom: 6px;
+}
+.quit-modal .fatigue-body {
+  font-size: 13px; margin-bottom: 16px;
+}
+.quit-modal .btn-fatigue-confirm {
+  padding: 10px; font-size: 14px;
+}
+.quit-modal .btn-quit-cancel {
+  padding: 8px; font-size: 13px; margin-top: 4px;
+}
+.fatigue-modal .stop-sign {
+  width: 48px; height: 48px;
+  margin: 0 auto 14px;
+}
+.fatigue-modal .stop-sign-inner {
+  font-size: 20px;
+}
+.fatigue-modal .fatigue-title {
+  font-size: 17px; margin-bottom: 6px;
+}
+.fatigue-modal .fatigue-body {
+  font-size: 13px; margin-bottom: 16px;
+}
+.fatigue-modal .btn-fatigue-confirm {
+  padding: 10px; font-size: 14px;
+}
+@keyframes modal-pop {
+  from { transform: scale(0.85); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+.stop-sign {
+  width: 72px; height: 72px;
+  background: #e53935;
+  clip-path: polygon(30% 0%, 70% 0%, 100% 30%, 100% 70%, 70% 100%, 30% 100%, 0% 70%, 0% 30%);
+  margin: 0 auto 20px;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 6px 20px rgba(229,57,53,0.3);
+}
+.stop-sign-inner {
+  color: #fff; font-size: 30px; font-weight: 900;
+  line-height: 1;
+}
+
+.fatigue-title {
+  font-size: 20px; font-weight: 700; color: #c2185b;
+  margin-bottom: 10px;
+}
+.fatigue-body {
+  font-size: 15px; color: #555; line-height: 1.7;
+  margin-bottom: 24px;
+}
+
+.btn-fatigue-confirm {
+  width: 100%; padding: 14px;
+  border: none; border-radius: 14px;
+  background: linear-gradient(135deg, #e91e63 0%, #c2185b 100%);
+  color: #fff;
+  font-size: 16px; font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(233,30,99,0.3);
+  transition: transform 0.2s ease;
+}
+.btn-fatigue-confirm:active {
+  transform: scale(0.95);
+}
+
+.btn-quit-cancel {
+  width: 100%; padding: 12px;
+  border: none; border-radius: 14px;
+  background: transparent;
+  color: #999;
+  font-size: 15px; font-weight: 500;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: color 0.2s ease;
+}
+.btn-quit-cancel:active {
+  color: #666;
+}
+
+.complete-modal {
+  background: rgba(255,255,255,0.45);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-radius: 20px;
+  padding: 24px 20px 20px;
+  width: 100%; max-width: 260px;
+  text-align: center;
+  box-shadow: 0 12px 36px rgba(0,0,0,0.15);
+  animation: modal-pop 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+.complete-icon {
+  font-size: 56px; margin-bottom: 16px;
+}
+.complete-title {
+  font-size: 22px; font-weight: 700; color: #c2185b;
+  margin-bottom: 8px;
+}
+.complete-subtitle {
+  font-size: 14px; color: #888; margin-bottom: 24px;
+}
+
+.screen-shake {
+  animation: screen-shake 0.12s ease-in-out;
+}
+@keyframes screen-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-6px); }
+  75% { transform: translateX(6px); }
+}
+
+@keyframes light-shake {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-10deg); }
+  75% { transform: rotate(10deg); }
+}
+
+@media (max-width: 400px) {
+  .setup-card { padding: 32px 20px 24px; }
+  .time-value { font-size: 44px; }
+  .traffic-light { width: 150px; gap: 14px; padding: 20px 0; }
+  .light-bulb { width: 66px; height: 66px; }
+}
+@media (min-width: 768px) {
+  .traffic-light { width: 250px; gap: 22px; padding: 30px 0; }
+  .light-bulb { width: 108px; height: 108px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="screen" id="setup-screen">
+  <div class="float-blob" id="blob-0"></div>
+  <div class="float-blob" id="blob-1"></div>
+  <div class="float-blob" id="blob-2"></div>
+  <div class="setup-card">
+    <h1 class="setup-title">情侣红绿灯挑战</h1>
+    <p class="setup-subtitle">设置挑战时间，开始你的耐力考验！</p>
+    <p class="time-label">挑战时间 (分钟)</p>
+    <div class="time-setter">
+      <button class="time-btn" id="btn-minus" aria-label="减少时间">−</button>
+      <span class="time-value" id="time-display">6</span>
+      <button class="time-btn" id="btn-plus" aria-label="增加时间">+</button>
+    </div>
+    <div class="preview-box">
+      <p class="preview-label">倒计时预览</p>
+      <p class="preview-time" id="preview-time">06:00</p>
+    </div>
+    <button class="btn-start" id="btn-start">开始挑战</button>
+  </div>
+  <div class="keyboard-overlay hidden" id="kb-overlay">
+    <div class="keyboard-panel">
+      <div class="kb-display" id="kb-display">0</div>
+      <div class="kb-row">
+        <button class="kb-key" data-key="1">1</button>
+        <button class="kb-key" data-key="2">2</button>
+        <button class="kb-key" data-key="3">3</button>
+      </div>
+      <div class="kb-row">
+        <button class="kb-key" data-key="4">4</button>
+        <button class="kb-key" data-key="5">5</button>
+        <button class="kb-key" data-key="6">6</button>
+      </div>
+      <div class="kb-row">
+        <button class="kb-key" data-key="7">7</button>
+        <button class="kb-key" data-key="8">8</button>
+        <button class="kb-key" data-key="9">9</button>
+      </div>
+      <div class="kb-row">
+        <button class="kb-key back" data-key="back">⌫</button>
+        <button class="kb-key" data-key="0">0</button>
+        <button class="kb-key action" data-key="confirm">确定</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="screen hidden" id="game-screen">
+  <div class="float-blob" id="gblob-0"></div>
+  <div class="float-blob" id="gblob-1"></div>
+  <div class="float-blob" id="gblob-2"></div>
+  <div class="game-header">
+    <span class="remaining-label">剩余时间</span>
+    <span class="remaining-time" id="remaining-time">06:00</span>
+  </div>
+  <div class="traffic-light-wrapper">
+    <div class="traffic-light" id="traffic-light">
+      <div class="light-bulb light-red off" id="light-red"></div>
+      <div class="light-bulb light-yellow off" id="light-yellow"></div>
+      <div class="light-bulb light-green off" id="light-green"></div>
+    </div>
+    <div class="light-countdown hidden" id="light-countdown">
+      <span class="countdown-value" id="countdown-value">00.000</span>
+      <span class="countdown-unit">秒</span>
+      <div class="countdown-bar-track">
+        <div class="countdown-bar-fill" id="countdown-bar-fill"></div>
+      </div>
+      <div class="status-hint">
+        <span class="status-text" id="status-text">注意观察灯光变化...</span>
+      </div>
+    </div>
+  </div>
+  <div class="game-footer">
+    <button class="btn-quit" id="btn-quit">放弃挑战</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="quit-overlay">
+  <div class="quit-modal">
+    <div class="stop-sign"><span class="stop-sign-inner">!</span></div>
+    <h2 class="fatigue-title">确定要放弃吗？</h2>
+    <p class="fatigue-body">当前挑战进度将会丢失，<br>确定要结束挑战吗？</p>
+    <button class="btn-fatigue-confirm" id="btn-quit-confirm">确认放弃</button>
+    <button class="btn-quit-cancel" id="btn-quit-cancel">继续挑战</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="fatigue-overlay">
+  <div class="fatigue-modal">
+    <div class="stop-sign"><span class="stop-sign-inner">停</span></div>
+    <h2 class="fatigue-title">前方道路提示</h2>
+    <p class="fatigue-body">长时间驾驶，请切换驾驶姿势！<br>伸个懒腰，活动一下~</p>
+    <button class="btn-fatigue-confirm" id="btn-fatigue-confirm">我已切换驾驶姿势 ✓</button>
+  </div>
+</div>
+
+<div class="modal-overlay hidden" id="complete-overlay">
+  <div class="complete-modal">
+    <div class="complete-icon">🎉</div>
+    <h2 class="complete-title">挑战完成</h2>
+    <p class="complete-subtitle">恭喜你坚持到了最后！</p>
+    <button class="btn-fatigue-confirm" id="btn-complete-restart">再来一局</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  const setupScreen = document.getElementById('setup-screen');
+  const gameScreen = document.getElementById('game-screen');
+  const timeDisplay = document.getElementById('time-display');
+  const previewTime = document.getElementById('preview-time');
+  const remainingTime = document.getElementById('remaining-time');
+  const statusText = document.getElementById('status-text');
+  const trafficLight = document.getElementById('traffic-light');
+  const lightRed = document.getElementById('light-red');
+  const lightYellow = document.getElementById('light-yellow');
+  const lightGreen = document.getElementById('light-green');
+  const fatigueOverlay = document.getElementById('fatigue-overlay');
+  const completeOverlay = document.getElementById('complete-overlay');
+  const quitOverlay = document.getElementById('quit-overlay');
+  const lightCountdown = document.getElementById('light-countdown');
+  const countdownValue = document.getElementById('countdown-value');
+  const countdownBarFill = document.getElementById('countdown-bar-fill');
+  const kbOverlay = document.getElementById('kb-overlay');
+  const kbDisplay = document.getElementById('kb-display');
+
+  const lights = [lightRed, lightYellow, lightGreen];
+  const lightColors = ['red', 'yellow', 'green'];
+
+  let totalSeconds = 360;
+  let remaining = 360;
+  let challengeMinutes = 6;
+  let gameRunning = false;
+  let flashPhase = false;
+  let stoppedPhase = false;
+  let currentLightIndex = 0;
+  let flashTimer = null;
+  let countdownTimer = null;
+  let stopTimer = null;
+  let shakeInterval = null;
+  let countdownMsTimer = null;
+  let countdownTotalMs = 0;
+  let fatigueShown = false;
+  let fatigueCheckSeconds = 0;
+
+  let audioCtx = null;
+
+  function initAudio() {
+    if (audioCtx) return;
+    try {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+    } catch(e) {}
+  }
+
+  function ensureAudio() {
+    if (!audioCtx) initAudio();
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+  }
+
+  function playClick() {
+    ensureAudio();
+    if (!audioCtx) return;
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(900, t);
+    osc.frequency.exponentialRampToValueAtTime(350, t + 0.04);
+    gain.gain.setValueAtTime(0.25, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+    osc.start(t); osc.stop(t + 0.05);
+  }
+
+  function playDong() {
+    ensureAudio();
+    if (!audioCtx) return;
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(140, t);
+    osc.frequency.exponentialRampToValueAtTime(55, t + 0.18);
+    gain.gain.setValueAtTime(0.9, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.22);
+    osc.start(t); osc.stop(t + 0.22);
+    const osc2 = audioCtx.createOscillator();
+    const gain2 = audioCtx.createGain();
+    osc2.connect(gain2); gain2.connect(audioCtx.destination);
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(70, t);
+    osc2.frequency.exponentialRampToValueAtTime(35, t + 0.2);
+    gain2.gain.setValueAtTime(0.5, t);
+    gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
+    osc2.start(t); osc2.stop(t + 0.25);
+  }
+
+  function playSelected() {
+    ensureAudio();
+    if (!audioCtx) return;
+    const t = audioCtx.currentTime;
+    const freqs = [523, 659, 784];
+    freqs.forEach((freq, i) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(i === 0 ? 0.8 : 0.4, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.8 + i * 0.1);
+      osc.start(t + i * 0.04);
+      osc.stop(t + 1.0);
+    });
+  }
+
+  let tickToggle = false;
+
+  function playTurnSignal() {
+    ensureAudio();
+    if (!audioCtx) return;
+    const t = audioCtx.currentTime;
+    const isTick = tickToggle;
+    tickToggle = !tickToggle;
+    const bufferSize = audioCtx.sampleRate * 0.008;
+    const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      const envelope = Math.max(0, 1 - i / bufferSize);
+      data[i] = (Math.random() * 2 - 1) * envelope * (isTick ? 0.8 : 0.6);
+    }
+    const noise = audioCtx.createBufferSource();
+    noise.buffer = buffer;
+    const filter = audioCtx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = isTick ? 3500 : 2200;
+    filter.Q.value = 1.5;
+    const gain = audioCtx.createGain();
+    gain.gain.setValueAtTime(0.6, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.015);
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioCtx.destination);
+    noise.start(t);
+    noise.stop(t + 0.02);
+  }
+
+  function vibrate(ms) {
+    if (navigator.vibrate) {
+      try { navigator.vibrate(ms); } catch(e) {}
+    }
+  }
+
+  function screenShake() {
+    gameScreen.classList.remove('screen-shake');
+    void gameScreen.offsetWidth;
+    gameScreen.classList.add('screen-shake');
+    setTimeout(() => gameScreen.classList.remove('screen-shake'), 150);
+  }
+
+  function formatTime(s) {
+    const m = Math.floor(s / 60);
+    const sec = s % 60;
+    return String(m).padStart(2, '0') + ':' + String(sec).padStart(2, '0');
+  }
+
+  function updatePreview() {
+    previewTime.textContent = formatTime(challengeMinutes * 60);
+  }
+
+  function updateRemaining() {
+    remainingTime.textContent = formatTime(remaining);
+  }
+
+  function allLightsOff() {
+    lights.forEach(l => { l.classList.remove('on'); l.classList.add('off'); });
+  }
+
+  function setLightOn(index) {
+    allLightsOff();
+    lights[index].classList.remove('off');
+    lights[index].classList.add('on');
+    currentLightIndex = index;
+    gameScreen.className = 'screen';
+    gameScreen.classList.add('bg-' + lightColors[index]);
+  }
+
+  function setBgByColor(colorName) {
+    gameScreen.className = 'screen';
+    gameScreen.classList.add('bg-' + colorName);
+  }
+
+  function startFlashing() {
+    if (!gameRunning) return;
+    flashPhase = true;
+    stoppedPhase = false;
+    trafficLight.classList.remove('shaking');
+    if (shakeInterval) { clearInterval(shakeInterval); shakeInterval = null; }
+    statusText.textContent = '注意观察灯光变化...';
+    const flashes = 7;
+    let count = 0;
+    let idx = Math.floor(Math.random() * 3);
+    setLightOn(idx);
+    setBgByColor(lightColors[idx]);
+    playDong();
+    vibrate(50);
+    screenShake();
+    count++;
+    flashTimer = setInterval(() => {
+      if (!gameRunning || !flashPhase) { clearInterval(flashTimer); flashTimer = null; return; }
+      if (count >= flashes) { clearInterval(flashTimer); flashTimer = null; playSelected(); vibrate(80); startShaking(idx); return; }
+      let next;
+      do { next = Math.floor(Math.random() * 3); } while (next === idx);
+      idx = next;
+      setLightOn(idx);
+      setBgByColor(lightColors[idx]);
+      playDong();
+      vibrate(50);
+      screenShake();
+      count++;
+    }, 500);
+  }
+
+  function startShaking(stoppedIndex) {
+    flashPhase = false;
+    stoppedPhase = true;
+    statusText.textContent = getStopHint(stoppedIndex);
+    const shakeDurations = [15, 20, 30];
+    const shakeDuration = shakeDurations[stoppedIndex];
+    countdownTotalMs = shakeDuration * 1000;
+    lightCountdown.classList.remove('hidden');
+    countdownBarFill.style.width = '100%';
+    countdownBarFill.style.background = getComputedStyle(document.documentElement).getPropertyValue('--' + lightColors[stoppedIndex] + '-glow').trim();
+    const startTime = Date.now();
+    const endTime = startTime + shakeDuration * 1000;
+    updateMsCountdown(endTime);
+    countdownMsTimer = setInterval(() => { updateMsCountdown(endTime); }, 50);
+    if (stoppedIndex === 0) {
+      stopTimer = setTimeout(() => { if (gameRunning) endShaking(); }, shakeDuration * 1000);
+      return;
+    }
+    trafficLight.classList.add('shaking');
+    let elapsed = 0;
+    tickToggle = false;
+    playTurnSignal();
+    vibrate(100);
+    shakeInterval = setInterval(() => {
+      if (!gameRunning || !stoppedPhase) { clearInterval(shakeInterval); shakeInterval = null; return; }
+      elapsed++;
+      playTurnSignal();
+      vibrate(80);
+      if (elapsed >= shakeDuration * 2) { clearInterval(shakeInterval); shakeInterval = null; endShaking(); }
+    }, 500);
+  }
+
+  function updateMsCountdown(endTime) {
+    const remaining = Math.max(0, endTime - Date.now());
+    const sec = Math.floor(remaining / 1000);
+    const ms = Math.floor((remaining % 1000) / 10);
+    countdownValue.textContent = String(sec).padStart(2, '0') + '.' + String(ms).padStart(2, '0');
+    if (countdownTotalMs > 0) countdownBarFill.style.width = (remaining / countdownTotalMs * 100) + '%';
+  }
+
+  function getStopHint(index) {
+    return {0:'请暂停一下叭，休息一会😫打咩！',1:'请缓慢通过行驶哦🤣',2:'请加速行驶！冲冲冲！🥰'}[index];
+  }
+
+  function endShaking() {
+    stoppedPhase = false;
+    trafficLight.classList.remove('shaking');
+    if (shakeInterval) { clearInterval(shakeInterval); shakeInterval = null; }
+    if (countdownMsTimer) { clearInterval(countdownMsTimer); countdownMsTimer = null; }
+    lightCountdown.classList.add('hidden');
+    allLightsOff();
+    gameScreen.className = 'screen';
+    statusText.textContent = '注意观察灯光变化...';
+    stopTimer = setTimeout(() => { if (gameRunning) startFlashing(); }, 1000);
+  }
+
+  function stopAllTimers() {
+    if (flashTimer) { clearInterval(flashTimer); flashTimer = null; }
+    if (countdownTimer) { clearInterval(countdownTimer); countdownTimer = null; }
+    if (stopTimer) { clearTimeout(stopTimer); stopTimer = null; }
+    if (shakeInterval) { clearInterval(shakeInterval); shakeInterval = null; }
+    if (countdownMsTimer) { clearInterval(countdownMsTimer); countdownMsTimer = null; }
+  }
+
+  function startGame() {
+    initAudio();
+    totalSeconds = challengeMinutes * 60;
+    remaining = totalSeconds;
+    fatigueShown = false;
+    fatigueCheckSeconds = 0;
+    gameRunning = true;
+    flashPhase = false;
+    stoppedPhase = false;
+    allLightsOff();
+    gameScreen.className = 'screen';
+    trafficLight.classList.remove('shaking');
+    updateRemaining();
+    statusText.textContent = '注意观察灯光变化...';
+    setupScreen.classList.add('hidden');
+    gameScreen.classList.remove('hidden');
+    countdownTimer = setInterval(() => {
+      if (!gameRunning) return;
+      remaining--;
+      updateRemaining();
+      const elapsedSec = totalSeconds - remaining;
+      if (elapsedSec > 0 && elapsedSec % 300 === 0 && elapsedSec !== fatigueCheckSeconds) {
+        fatigueCheckSeconds = elapsedSec;
+        showFatigue();
+      }
+      if (remaining <= 0) {
+        gameRunning = false;
+        stopAllTimers();
+        allLightsOff();
+        gameScreen.className = 'screen';
+        trafficLight.classList.remove('shaking');
+        statusText.textContent = '挑战完成！';
+        showComplete();
+      }
+    }, 1000);
+    startFlashing();
+  }
+
+  function quitGame() {
+    gameRunning = false;
+    stopAllTimers();
+    allLightsOff();
+    gameScreen.className = 'screen';
+    trafficLight.classList.remove('shaking');
+    lightCountdown.classList.add('hidden');
+    statusText.textContent = '注意观察灯光变化...';
+    setupScreen.classList.remove('hidden');
+    gameScreen.classList.add('hidden');
+    fatigueOverlay.classList.add('hidden');
+    completeOverlay.classList.add('hidden');
+    updatePreview();
+  }
+
+  function showFatigue() { fatigueOverlay.classList.remove('hidden'); }
+  function hideFatigue() { fatigueOverlay.classList.add('hidden'); playClick(); }
+  function showComplete() { completeOverlay.classList.remove('hidden'); }
+
+  function restartGame() {
+    completeOverlay.classList.add('hidden');
+    setupScreen.classList.remove('hidden');
+    gameScreen.classList.add('hidden');
+    gameRunning = false;
+    stopAllTimers();
+    allLightsOff();
+    gameScreen.className = 'screen';
+    trafficLight.classList.remove('shaking');
+    updatePreview();
+  }
+
+  document.getElementById('btn-minus').addEventListener('click', () => {
+    if (challengeMinutes > 1) { challengeMinutes--; timeDisplay.textContent = challengeMinutes; updatePreview(); }
+    playClick();
+  });
+  document.getElementById('btn-plus').addEventListener('click', () => {
+    if (challengeMinutes < 120) { challengeMinutes++; timeDisplay.textContent = challengeMinutes; updatePreview(); }
+    playClick();
+  });
+  document.getElementById('btn-start').addEventListener('click', () => { playClick(); startGame(); });
+  document.getElementById('btn-quit').addEventListener('click', () => { playClick(); quitOverlay.classList.remove('hidden'); });
+  document.getElementById('btn-quit-confirm').addEventListener('click', () => { quitOverlay.classList.add('hidden'); quitGame(); });
+  document.getElementById('btn-quit-cancel').addEventListener('click', () => { quitOverlay.classList.add('hidden'); });
+  document.getElementById('btn-fatigue-confirm').addEventListener('click', hideFatigue);
+  document.getElementById('btn-complete-restart').addEventListener('click', () => { playClick(); restartGame(); });
+
+  let kbInput = '';
+  timeDisplay.addEventListener('click', () => { kbInput = String(challengeMinutes); kbDisplay.textContent = kbInput; kbOverlay.classList.remove('hidden'); });
+  kbOverlay.addEventListener('click', (e) => { if (e.target === kbOverlay) kbOverlay.classList.add('hidden'); });
+  document.querySelectorAll('.kb-key').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.key;
+      if (key >= '0' && key <= '9') { kbInput = (kbInput === '0' || kbInput.length >= 3) ? key : kbInput + key; kbDisplay.textContent = kbInput; }
+      else if (key === 'back') { kbInput = kbInput.slice(0, -1) || '0'; kbDisplay.textContent = kbInput; }
+      else if (key === 'confirm') {
+        let val = parseInt(kbInput, 10); if (isNaN(val) || val < 1) val = 1; if (val > 120) val = 120;
+        challengeMinutes = val; timeDisplay.textContent = challengeMinutes; updatePreview(); kbOverlay.classList.add('hidden'); playClick();
+      }
+    });
+  });
+
+  // Setup blobs
+  const blobEls = [document.getElementById('blob-0'), document.getElementById('blob-1'), document.getElementById('blob-2')];
+  const blobGradients = [
+    'radial-gradient(circle, rgba(248,187,208,0.22) 0%, rgba(248,187,208,0.06) 50%, transparent 80%)',
+    'radial-gradient(circle, rgba(244,143,177,0.18) 0%, rgba(244,143,177,0.05) 50%, transparent 80%)',
+    'radial-gradient(circle, rgba(252,228,236,0.24) 0%, rgba(252,228,236,0.07) 50%, transparent 80%)'
+  ];
+  const BLOB_SIZE = 220;
+  const blobs = blobEls.map((el, i) => {
+    el.style.width = BLOB_SIZE + 'px'; el.style.height = BLOB_SIZE + 'px'; el.style.background = blobGradients[i];
+    return { el, x: Math.random() * (window.innerWidth - BLOB_SIZE), y: Math.random() * (window.innerHeight - BLOB_SIZE), vx: (Math.random() - 0.5) * 0.6, vy: (Math.random() - 0.5) * 0.6, size: BLOB_SIZE };
+  });
+  function animateBlobs() {
+    const W = window.innerWidth, H = window.innerHeight;
+    for (const b of blobs) {
+      b.x += b.vx; b.y += b.vy;
+      if (b.x < -80 || b.x > W - b.size + 80) { b.vx *= -1; b.x = Math.max(-80, Math.min(b.x, W - b.size + 80)); }
+      if (b.y < -80 || b.y > H - b.size + 80) { b.vy *= -1; b.y = Math.max(-80, Math.min(b.y, H - b.size + 80)); }
+      if (Math.random() < 0.002) { b.vx += (Math.random() - 0.5) * 0.3; b.vy += (Math.random() - 0.5) * 0.3; const m = Math.sqrt(b.vx*b.vx+b.vy*b.vy); if (m > 1) { b.vx /= m; b.vy /= m; } }
+      b.el.style.transform = 'translate(' + b.x + 'px, ' + b.y + 'px)';
+    }
+    requestAnimationFrame(animateBlobs);
+  }
+  requestAnimationFrame(animateBlobs);
+
+  // Game screen blobs - color switches with selected light
+  const gBlobEls = [document.getElementById('gblob-0'), document.getElementById('gblob-1'), document.getElementById('gblob-2')];
+  const G_BLOB_SIZE = 220;
+  const gBlobs = gBlobEls.map((el, i) => {
+    el.style.width = G_BLOB_SIZE + 'px'; el.style.height = G_BLOB_SIZE + 'px';
+    return { el, x: Math.random() * (window.innerWidth - G_BLOB_SIZE), y: Math.random() * (window.innerHeight - G_BLOB_SIZE), vx: (Math.random() - 0.5) * 0.5, vy: (Math.random() - 0.5) * 0.5, size: G_BLOB_SIZE };
+  });
+
+  const gBlobGradients = [
+    'radial-gradient(circle, rgba(248,187,208,0.20) 0%, rgba(248,187,208,0.05) 50%, transparent 80%)',
+    'radial-gradient(circle, rgba(244,143,177,0.16) 0%, rgba(244,143,177,0.04) 50%, transparent 80%)',
+    'radial-gradient(circle, rgba(252,228,236,0.22) 0%, rgba(252,228,236,0.06) 50%, transparent 80%)'
+  ];
+  gBlobs.forEach((b, i) => { b.el.style.background = gBlobGradients[i]; });
+
+  function animateGameBlobs() {
+    const W = window.innerWidth, H = window.innerHeight;
+    for (const b of gBlobs) {
+      b.x += b.vx; b.y += b.vy;
+      if (b.x < -80 || b.x > W - b.size + 80) { b.vx *= -1; b.x = Math.max(-80, Math.min(b.x, W - b.size + 80)); }
+      if (b.y < -80 || b.y > H - b.size + 80) { b.vy *= -1; b.y = Math.max(-80, Math.min(b.y, H - b.size + 80)); }
+      if (Math.random() < 0.002) { b.vx += (Math.random() - 0.5) * 0.3; b.vy += (Math.random() - 0.5) * 0.3; const m = Math.sqrt(b.vx*b.vx+b.vy*b.vy); if (m > 1) { b.vx /= m; b.vy /= m; } }
+      b.el.style.transform = 'translate(' + b.x + 'px, ' + b.y + 'px)';
+    }
+    requestAnimationFrame(animateGameBlobs);
+  }
+  requestAnimationFrame(animateGameBlobs);
+
+  updatePreview();
+})();
+</script>
+</body>
+</html>
